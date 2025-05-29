@@ -1421,7 +1421,7 @@ void multiplyPauliGadget(Qureg qureg, PauliStr str, qreal angle) {
     validate_quregFields(qureg, __func__);
     validate_pauliStrTargets(qureg, str, __func__);
 
-    qreal phase = util_getPhaseFromGateAngle(angle);
+    qcomp phase = util_getPhaseFromGateAngle(angle);
     localiser_statevec_anyCtrlPauliGadget(qureg, {}, {}, str, phase);
 }
 
@@ -1430,6 +1430,22 @@ void applyPauliGadget(Qureg qureg, PauliStr str, qreal angle) {
     validate_pauliStrTargets(qureg, str, __func__);
     
     applyMultiStateControlledPauliGadget(qureg, nullptr, nullptr, 0, str, angle);
+}
+
+void applyNonUnitaryPauliGadget(Qureg qureg, PauliStr str, qcomp angle) {
+    validate_quregFields(qureg, __func__);
+    validate_pauliStrTargets(qureg, str, __func__);
+
+    qcomp phase = util_getPhaseFromGateAngle(angle);
+    localiser_statevec_anyCtrlPauliGadget(qureg, {}, {}, str, phase);
+
+    if (!qureg.isDensityMatrix)
+        return;
+
+    // conj(e^i(a)XZ) = e^(-i conj(a)XZ) but conj(Y)=-Y, so odd-Y undoes phase negation
+    phase = std::conj(phase) * (paulis_hasOddNumY(str) ? 1 : -1);
+    str = paulis_getShiftedPauliStr(str, qureg.numQubits);
+    localiser_statevec_anyCtrlPauliGadget(qureg, {}, {}, str, phase);
 }
 
 void applyControlledPauliGadget(Qureg qureg, int control, PauliStr str, qreal angle) {
@@ -1464,7 +1480,7 @@ void applyMultiStateControlledPauliGadget(Qureg qureg, int* controls, int* state
     qreal phase = util_getPhaseFromGateAngle(angle);
     auto ctrlVec = util_getVector(controls, numControls);
     auto stateVec = util_getVector(states, numControls); // empty if states==nullptr
-    localiser_statevec_anyCtrlPauliGadget(qureg, ctrlVec, stateVec, str, phase);
+    localiser_statevec_anyCtrlPauliGadget(qureg, ctrlVec, stateVec, str, qcomp(phase, 0));
 
     if (!qureg.isDensityMatrix)
         return;
@@ -1473,7 +1489,7 @@ void applyMultiStateControlledPauliGadget(Qureg qureg, int* controls, int* state
     phase *= paulis_hasOddNumY(str) ? 1 : -1;
     ctrlVec = util_getBraQubits(ctrlVec, qureg);
     str = paulis_getShiftedPauliStr(str, qureg.numQubits);
-    localiser_statevec_anyCtrlPauliGadget(qureg, ctrlVec, stateVec, str, phase);
+    localiser_statevec_anyCtrlPauliGadget(qureg, ctrlVec, stateVec, str, qcomp(phase, 0));
 }
 
 } // end de-mangler
@@ -1502,7 +1518,7 @@ void multiplyPhaseGadget(Qureg qureg, int* targets, int numTargets, qreal angle)
     validate_targets(qureg, targets, numTargets, __func__);
 
     qreal phase = util_getPhaseFromGateAngle(angle);
-    localiser_statevec_anyCtrlPhaseGadget(qureg, {}, {}, util_getVector(targets,numTargets), phase);
+    localiser_statevec_anyCtrlPhaseGadget(qureg, {}, {}, util_getVector(targets,numTargets), qcomp(phase, 0));
 }
 
 void applyPhaseGadget(Qureg qureg, int* targets, int numTargets, qreal angle) {
@@ -1538,7 +1554,7 @@ void applyMultiStateControlledPhaseGadget(Qureg qureg, int* controls, int* state
     auto ctrlVec = util_getVector(controls, numControls);
     auto targVec = util_getVector(targets,  numTargets);
     auto stateVec = util_getVector(states,  numControls); // empty if states==nullptr
-    localiser_statevec_anyCtrlPhaseGadget(qureg, ctrlVec, stateVec, targVec, phase);
+    localiser_statevec_anyCtrlPhaseGadget(qureg, ctrlVec, stateVec, targVec, qcomp(phase, 0));
 
     if (!qureg.isDensityMatrix)
         return;
@@ -1546,7 +1562,7 @@ void applyMultiStateControlledPhaseGadget(Qureg qureg, int* controls, int* state
     phase *= -1;
     ctrlVec = util_getBraQubits(ctrlVec, qureg);
     targVec = util_getBraQubits(targVec, qureg);
-    localiser_statevec_anyCtrlPhaseGadget(qureg, ctrlVec, stateVec, targVec, phase);
+    localiser_statevec_anyCtrlPhaseGadget(qureg, ctrlVec, stateVec, targVec, qcomp(phase, 0));
 }
 
 } // end de-mangler

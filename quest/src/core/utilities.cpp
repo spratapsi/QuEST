@@ -913,6 +913,11 @@ qreal util_getPhaseFromGateAngle(qreal angle) {
     return - angle / 2;
 }
 
+qcomp util_getPhaseFromGateAngle(qcomp angle) {
+
+    return - angle / 2;
+}
+
 
 
 /*
